@@ -12,12 +12,13 @@ find_package(catkin REQUIRED COMPONENTS roscpp roslib std_msgs sensor_msgs geome
 find_package(gazebo REQUIRED)
 find_package(cmake_modules REQUIRED)
 find_package(Eigen REQUIRED)
+find_package(mavros REQUIRED)
 
 generate_dynamic_reconfigure_options(cfg/setSIT1FLC.cfg cfg/setDIT1FLC.cfg cfg/setSIT2FLC.cfg cfg/setDIT2FLC.cfg cfg/setFNN.cfg cfg/setFNN_IT2.cfg cfg/setDNN.cfg cfg/setPID.cfg cfg/setPIDsimple.cfg cfg/setTrajectory.cfg cfg/setNoise.cfg cfg/setSafeY6.cfg cfg/setSafeIntelDrone.cfg)
 
 catkin_package()
 
-include_directories(include "/opt/ros/kinetic/include" ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
+include_directories(include "/opt/ros/kinetic/include" ${catkin_INCLUDE_DIRS} ${GAZEBO_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS} ${mavros_INCLUDE_DIRS})
 
 LINK_DIRECTORIES("/usr/local/lib")
 
