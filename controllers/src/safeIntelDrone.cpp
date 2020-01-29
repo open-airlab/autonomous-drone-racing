@@ -42,70 +42,13 @@ void dynamicReconfigureCallback(controllers::setSafeIntelDroneConfig &config, ui
     controller = config.controller;
 }
 
-void optitrackCallback(const geometry_msgs::PoseStamped& optitrack_msg){
-    Duration dt = optitrack_msg.header.stamp - time_old;
-    nav_msgs::Odometry odometry_msg;
-    odometry_msg.header.seq = optitrack_msg.header.seq;
-    odometry_msg.header.stamp = optitrack_msg.header.stamp;
-    odometry_msg.header.frame_id = optitrack_msg.header.frame_id;
-    odometry_msg.child_frame_id = "Y6";
-
-    odometry_msg.pose.pose.position.x = optitrack_msg.pose.position.x;
-    odometry_msg.pose.pose.position.y = optitrack_msg.pose.position.y;
-    odometry_msg.pose.pose.position.z = optitrack_msg.pose.position.z;
-
-    tf::Quaternion q(optitrack_msg.pose.orientation.x, optitrack_msg.pose.orientation.y, optitrack_msg.pose.orientation.z, optitrack_msg.pose.orientation.w);
-    //q.normalize();
-    tf::Matrix3x3 m(q);
-    double x, y, z, roll, pitch;
-    m.getEulerZYX(z, y, x);
-    roll = x;
-    pitch = y;
-    yaw = z;
-    //q = tf::createQuaternionFromRPY(roll, pitch, yaw);
-    odometry_msg.pose.pose.orientation = optitrack_msg.pose.orientation;
-
-    double vx = (odometry_msg.pose.pose.position.x - position.x) / (dt.toNSec() / pow(10, 9));
-    double vy = (odometry_msg.pose.pose.position.y - position.y) / (dt.toNSec() / pow(10, 9));
-    double vz = (odometry_msg.pose.pose.position.z - position.z) / (dt.toNSec() / pow(10, 9));
-    double omega_x = (roll - orientation.x) / (dt.toNSec() / pow(10, 9));
-    double omega_y = (pitch - orientation.y) / (dt.toNSec() / pow(10, 9));
-    double omega_z = (yaw - orientation.z) / (dt.toNSec() / pow(10, 9));
-    push(vx, vy, vz, omega_x, omega_y, omega_z);
-    odometry_msg.twist.twist = filter();
-    odometry_publisher.publish(odometry_msg);
-
-    tf::Quaternion qc(noise.pose.pose.orientation.x, noise.pose.pose.orientation.y, noise.pose.pose.orientation.z, noise.pose.pose.orientation.w);
-    tf::Quaternion rqc = q * qc;
-    odometry_msg.pose.pose.position.x += noise.pose.pose.position.x;
-    odometry_msg.pose.pose.position.y += noise.pose.pose.position.y;
-    odometry_msg.pose.pose.position.z += noise.pose.pose.position.z;
-    odometry_msg.pose.pose.orientation.x = rqc.getX(); // DO NOT WORK
-    odometry_msg.pose.pose.orientation.y = rqc.getY(); // DO NOT WORK
-    odometry_msg.pose.pose.orientation.z = rqc.getZ(); // DO NOT WORK
-    odometry_msg.pose.pose.orientation.w = rqc.getW(); // DO NOT WORK
-    odometry_msg.twist.twist.linear.x += odometry_msg.twist.twist.linear.x;
-    odometry_msg.twist.twist.linear.y += odometry_msg.twist.twist.linear.y;
-    odometry_msg.twist.twist.linear.z += odometry_msg.twist.twist.linear.z;
-    odometry_msg.twist.twist.angular.x += odometry_msg.twist.twist.angular.x;
-    odometry_msg.twist.twist.angular.y += odometry_msg.twist.twist.angular.y;
-    odometry_msg.twist.twist.angular.z += odometry_msg.twist.twist.angular.z;
-    noisy_odometry_publisher.publish(odometry_msg);
-
-    time_old = odometry_msg.header.stamp;
-    position = odometry_msg.pose.pose.position;
-    orientation.x = roll;
-    orientation.y = pitch;
-    orientation.z = yaw;
-}
-
 void viconCallback(const geometry_msgs::TransformStamped& vicon_msg){
     Duration dt = vicon_msg.header.stamp - time_old;
     nav_msgs::Odometry odometry_msg;
     odometry_msg.header.seq = vicon_msg.header.seq;
     odometry_msg.header.stamp = vicon_msg.header.stamp;
     odometry_msg.header.frame_id = vicon_msg.header.frame_id;
-    odometry_msg.child_frame_id = "IntelDrone";
+    odometry_msg.child_frame_id = "inteldrone";
 
     odometry_msg.pose.pose.position.x = vicon_msg.transform.translation.x;
     odometry_msg.pose.pose.position.y = vicon_msg.transform.translation.y;
@@ -120,7 +63,7 @@ void viconCallback(const geometry_msgs::TransformStamped& vicon_msg){
     yaw = z;
     odometry_msg.pose.pose.orientation = vicon_msg.transform.rotation;
 
-    double vx = (odometry_msg.pose.pose.position.x - position.x) / (dt.toNSec() / pow(10, 9));
+    double vx = (odometry_msg.pose.pose.position.x - position.x) / (dt.toNSec() / pow(10, 9));     //vx here is not m/s?
     double vy = (odometry_msg.pose.pose.position.y - position.y) / (dt.toNSec() / pow(10, 9));
     double vz = (odometry_msg.pose.pose.position.z - position.z) / (dt.toNSec() / pow(10, 9));
     double omega_x = (roll - orientation.x) / (dt.toNSec() / pow(10, 9));
@@ -158,36 +101,42 @@ float bound(float v, float b){
 }
 
 void commandCallback(const std_msgs::Int8& command_msg){
-    geometry_msgs::TwistStamped velocity_msg;
-	velocity_msg.header.stamp = ros::Time::now();;
-    switch(command_msg.data){
-    case 1: // hower
 
-        break;
-    case 2: // arm
-    	offb_set_mode.request.custom_mode = "OFFBOARD";
-		set_mode_client.call(offb_set_mode);
-   		arm_cmd.request.value = true;
-		arming_client.call(arm_cmd);
-        stop = false;
-        break;
-    case 3: // land
-    	offb_set_mode.request.custom_mode = "OFFBOARD";
-		set_mode_client.call(offb_set_mode);
-        land_cmd.request.yaw = yaw;
-        land_cmd.request.latitude = position_d(0);
-        land_cmd.request.longitude = position_d(1);
-        land_cmd.request.altitude = 0;
-		land_client.call(land_cmd);
-        stop = true;
-        break;
-    case 4: // disarm
-		offb_set_mode.request.custom_mode = "OFFBOARD";
-		set_mode_client.call(offb_set_mode);
-   		arm_cmd.request.value = false;
-		arming_client.call(arm_cmd);
-		stop = true;
-    }
+    // change the purpose of the callback: to set up the type of controller
+
+    controller = command_msg.data;
+
+
+    // geometry_msgs::TwistStamped velocity_msg;
+	// velocity_msg.header.stamp = ros::Time::now();;
+    // switch(command_msg.data){
+    // case 1: // hower
+
+    //     break;
+    // case 2: // arm
+    // 	offb_set_mode.request.custom_mode = "OFFBOARD";
+	// 	set_mode_client.call(offb_set_mode);
+   	// 	arm_cmd.request.value = true;
+	// 	arming_client.call(arm_cmd);
+    //     stop = false;
+    //     break;
+    // case 3: // land
+    // 	offb_set_mode.request.custom_mode = "OFFBOARD";
+	// 	set_mode_client.call(offb_set_mode);
+    //     land_cmd.request.yaw = yaw;
+    //     land_cmd.request.latitude = position_d(0);
+    //     land_cmd.request.longitude = position_d(1);
+    //     land_cmd.request.altitude = 0;
+	// 	land_client.call(land_cmd);
+    //     stop = true;
+    //     break;
+    // case 4: // disarm
+	// 	offb_set_mode.request.custom_mode = "OFFBOARD";
+	// 	set_mode_client.call(offb_set_mode);
+   	// 	arm_cmd.request.value = false;
+	// 	arming_client.call(arm_cmd);
+	// 	stop = true;
+    // }
 }
 
 void commandPositionCallback(const geometry_msgs::QuaternionStamped& command_msg){
@@ -244,7 +193,7 @@ SafeIntelDrone::SafeIntelDrone(int argc, char** argv){
     ros::init(argc, argv, "safeIntelDrone");
     ros::NodeHandle node_handle;
 
-    vicon_subscriber = node_handle.subscribe("/vicon/IntelDrone/IntelDrone", 1, viconCallback);
+    vicon_subscriber = node_handle.subscribe("/vicon/inteldrone/inteldrone", 1, viconCallback);
     command_subscriber = node_handle.subscribe("/IntelDrone/command", 1, commandCallback);
     command_position_subscriber = node_handle.subscribe("/IntelDrone/command_position", 1, commandPositionCallback);
     command_velocity_subscriber = node_handle.subscribe("/IntelDrone/command_velocity", 1, commandVelocityCallback);
@@ -336,6 +285,9 @@ void SafeIntelDrone::run(){
                 tf::Quaternion q = tf::createQuaternionFromRPY(0, 0, 0);
                 quaternionTFToMsg(q, position_msg.pose.orientation);
             }
+
+            std::cout << "position command to move to: " << position_msg.pose.position.x << ", " << position_msg.pose.position.y  << ", " 
+                                                        << position_msg.pose.position.z << std::endl;
 
             position_publisher.publish(position_msg);
         }
