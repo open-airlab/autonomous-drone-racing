@@ -25,9 +25,9 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <sensor_msgs/BatteryState.h>
 
-#define MAX_X   5.5     //7
-#define MAX_Y   5.5     //7
-#define MAX_Z   3.0     //4
+#define MAX_X   10.5     //7
+#define MAX_Y   10.5     //7
+#define MAX_Z   10.0     //4
 #define MAX_V   0.5
 #define MAX_RP  (M_PI / 10)
 

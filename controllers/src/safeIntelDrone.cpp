@@ -206,7 +206,7 @@ SafeIntelDrone::SafeIntelDrone(int argc, char** argv){
     attitude_publisher = node_handle.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_attitude/attitude", 1);
     throttle_publisher = node_handle.advertise<std_msgs::Float64>("/mavros/setpoint_attitude/att_throttle", 1);
     odometry_publisher = node_handle.advertise<nav_msgs::Odometry>("/IntelDrone/odometry", 1);
-    pose_publisher = node_handle.advertise<geometry_msgs::PoseStamped>("/mavros/mocap/pose", 1);
+    pose_publisher = node_handle.advertise<geometry_msgs::PoseStamped>("/mavros/vision_pose/pose", 1);  //note: EKF2 in pixhawk 4 only accept /mavros/vision_pose/pose. If using LPE, we can use /mavros/mocap/pose
 	
     set_mode_client = node_handle.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
     arming_client = node_handle.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
