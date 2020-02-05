@@ -7,7 +7,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <controllers/setTrajectoryConfig.h>
 #include <Eigen/Dense>
-#include <global_planner/FlatTarget.h>
+#include <controllers/FlatTarget.h>
 #include <nav_msgs/Odometry.h>
 
 using namespace geometry_msgs;

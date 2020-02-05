@@ -25,7 +25,7 @@ Trajectory::Trajectory(int argc, char** argv){
 
     trajectory_publisher = node_handle.advertise<geometry_msgs::QuaternionStamped>("/uav/trajectory", 1);
     velocity_publisher = node_handle.advertise<geometry_msgs::QuaternionStamped>("/uav/trajectory_velocity", 1);
-    flat_publisher_ = node_handle.advertise<global_planner::FlatTarget>("reference/flatsetpoint", 10);
+    flat_publisher_ = node_handle.advertise<controllers::FlatTarget>("reference/flatsetpoint", 10);
     
     odom_publisher_ = node_handle.advertise<nav_msgs::Odometry>("/trajectory/desired_odom", 1); // for rotors_simulator
 
@@ -91,7 +91,7 @@ void Trajectory::run(){
     double d = 0;
 
     double dt = (double)1/100;
-    ros::Rate rate(100);
+    ros::Rate rate(100);            //Frequency
     while(ros::ok()){
         rate.sleep();
         ros::spinOnce();
@@ -330,7 +330,7 @@ void Trajectory::run(){
         velocity_msg.quaternion.w = var_speed;
         velocity_publisher.publish(velocity_msg);
 
-        global_planner::FlatTarget flat_target_msg;
+        controllers::FlatTarget flat_target_msg;
         flat_target_msg.type_mask = 4;
         flat_target_msg.position.x = trajectory(0);
         flat_target_msg.position.y = trajectory(1);
