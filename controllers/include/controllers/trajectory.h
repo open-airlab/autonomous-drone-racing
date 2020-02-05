@@ -7,6 +7,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <controllers/setTrajectoryConfig.h>
 #include <Eigen/Dense>
+#include <global_planner/FlatTarget.h>
+#include <nav_msgs/Odometry.h>
 
 using namespace geometry_msgs;
 using namespace std;
@@ -18,7 +20,8 @@ using Eigen::Vector4d;
 // Publishers
 ros::Publisher trajectory_publisher;
 ros::Publisher velocity_publisher;
-ros::Publisher pose_publisher;
+ros::Publisher odom_publisher_;
+ros::Publisher flat_publisher_;
 
 // Pose
 Vector4d pose_d;

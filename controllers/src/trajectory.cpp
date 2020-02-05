@@ -25,40 +25,41 @@ Trajectory::Trajectory(int argc, char** argv){
 
     trajectory_publisher = node_handle.advertise<geometry_msgs::QuaternionStamped>("/uav/trajectory", 1);
     velocity_publisher = node_handle.advertise<geometry_msgs::QuaternionStamped>("/uav/trajectory_velocity", 1);
-
-    pose_publisher = node_handle.advertise<geometry_msgs::PoseStamped>("/uav/pose", 1); // for rotors_simulator
+    flat_publisher_ = node_handle.advertise<global_planner::FlatTarget>("reference/flatsetpoint", 10);
+    
+    odom_publisher_ = node_handle.advertise<nav_msgs::Odometry>("/trajectory/desired_odom", 1); // for rotors_simulator
 
     pose_d << 0, 0, 0, 0;
     trajectory_type = 0;
     speed = 1;
 
-    cout << "File name: " << argv[1] << endl;
+    // cout << "File name: " << argv[1] << endl;
 
-    string line;
-    ifstream myfile(argv[1]);
-    if(myfile.is_open()){
+    // string line;
+    // ifstream myfile(argv[1]);
+    // if(myfile.is_open()){
 
-        int points;
-        while(getline(myfile, line))
-            ++points;
-        waypoints = MatrixXd(points, 4);
+    //     int points;
+    //     while(getline(myfile, line))
+    //         ++points;
+    //     waypoints = MatrixXd(points, 4);
 
-        ifstream myfile(argv[1]);
-        for(int i = 0; getline(myfile, line); ++i){
-            string delimiter = "\t";
+    //     ifstream myfile(argv[1]);
+    //     for(int i = 0; getline(myfile, line); ++i){
+    //         string delimiter = "\t";
 
-            size_t pos = 0;
-            for(int j = 0; (pos = line.find(delimiter)) != string::npos; ++j) {
-                waypoints(i, j) = atof(line.substr(0, pos).c_str());
-                line.erase(0, pos + delimiter.length());
-            }
-            waypoints(i, 3) = atof(line.c_str()) / 180 * M_PI;
-        }
-        myfile.close();
-        cout << "[Trajectory] waypoints:\n" << waypoints << endl;
-    }
-    else
-        cout << "Unable to open file: " << argv[1] << endl;
+    //         size_t pos = 0;
+    //         for(int j = 0; (pos = line.find(delimiter)) != string::npos; ++j) {
+    //             waypoints(i, j) = atof(line.substr(0, pos).c_str());
+    //             line.erase(0, pos + delimiter.length());
+    //         }
+    //         waypoints(i, 3) = atof(line.c_str()) / 180 * M_PI;
+    //     }
+    //     myfile.close();
+    //     cout << "[Trajectory] waypoints:\n" << waypoints << endl;
+    // }
+    // else
+    //     cout << "Unable to open file: " << argv[1] << endl;
 
     waypoint = 0;
 }
@@ -103,12 +104,6 @@ void Trajectory::run(){
         case 0: // no command
             trajectory << 0, 0, -10, 0;
             velocity << 0, 0, 0, 0;
-
-            pose_msg.header.stamp = ros::Time::now(); // for rotors_simulator
-            pose_msg.pose.position.x = 0; // for rotors_simulator
-            pose_msg.pose.position.y = 0; // for rotors_simulator
-            pose_msg.pose.position.z = 1; // for rotors_simulator
-            pose_publisher.publish(pose_msg); // for rotors_simulator
 
             break;
         case 1: // hower
@@ -334,6 +329,36 @@ void Trajectory::run(){
         velocity_msg.quaternion.z = velocity(2);
         velocity_msg.quaternion.w = var_speed;
         velocity_publisher.publish(velocity_msg);
+
+        global_planner::FlatTarget flat_target_msg;
+        flat_target_msg.type_mask = 4;
+        flat_target_msg.position.x = trajectory(0);
+        flat_target_msg.position.y = trajectory(1);
+        flat_target_msg.position.z = trajectory(2);
+        flat_target_msg.velocity.x = velocity(0);
+        flat_target_msg.velocity.y = velocity(1);
+        flat_target_msg.velocity.z = velocity(2);
+        flat_target_msg.acceleration.x = 0;
+        flat_target_msg.acceleration.y = 0;
+        flat_target_msg.acceleration.z = 0;
+        flat_target_msg.jerk.x = 0;
+        flat_target_msg.jerk.y = 0;
+        flat_target_msg.jerk.z = 0;
+        flat_target_msg.snap.x = 0;
+        flat_target_msg.snap.y = 0;
+        flat_target_msg.snap.z = 0;
+        flat_publisher_.publish(flat_target_msg);
+
+        nav_msgs::Odometry desired_odom_msg;
+        desired_odom_msg.header.stamp = ros::Time::now();
+        desired_odom_msg.header.frame_id = "map";
+        desired_odom_msg.pose.pose.position.x = trajectory(0);
+        desired_odom_msg.pose.pose.position.y = trajectory(1);
+        desired_odom_msg.pose.pose.position.z = trajectory(2);
+        desired_odom_msg.twist.twist.linear.x = velocity(0);
+        desired_odom_msg.twist.twist.linear.y = velocity(1);
+        desired_odom_msg.twist.twist.linear.z = velocity(2);
+        odom_publisher_.publish(desired_odom_msg);
 
         //cout << "[Trajectory]: trajectory = " << trajectory.transpose() << endl;
 
