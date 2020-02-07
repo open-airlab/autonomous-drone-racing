@@ -1,6 +1,6 @@
 #include "controllers/trajectory.h"
 
-void dynamicReconfigureCallback(controllers::setTrajectoryConfig &config, uint32_t level){
+void Trajectory::dynamicReconfigureCallback(controllers::setTrajectoryConfig &config, uint32_t level){
     trajectory_type = config.trajectory;
     if(level == 0){
         waypoint = 0;
@@ -16,6 +16,7 @@ void dynamicReconfigureCallback(controllers::setTrajectoryConfig &config, uint32
     speed = config.speed;
 
     pose_d << config.x_d, config.y_d, config.z_d, config.yaw_d / 180 * M_PI;
+    std::cout << "control type = " << trajectory_type << "; pose d = " << pose_d(0) << ", " << pose_d(1) << ", " << pose_d(2) << ", " << pose_d(3) << std::endl;
 }
 
 // Constructor
@@ -25,6 +26,8 @@ Trajectory::Trajectory(int argc, char** argv){
 
     trajectory_publisher = node_handle.advertise<geometry_msgs::QuaternionStamped>("/uav/trajectory", 1);
     velocity_publisher = node_handle.advertise<geometry_msgs::QuaternionStamped>("/uav/trajectory_velocity", 1);
+    
+    pos_publisher_ = node_handle.advertise<geometry_msgs::PoseStamped>("/uav/position", 1);
     flat_publisher_ = node_handle.advertise<controllers::FlatTarget>("reference/flatsetpoint", 10);
     
     odom_publisher_ = node_handle.advertise<nav_msgs::Odometry>("/trajectory/desired_odom", 1); // for rotors_simulator
@@ -71,10 +74,6 @@ Trajectory::~Trajectory(){
 }
 
 void Trajectory::run(){
-    dynamic_reconfigure::Server<controllers::setTrajectoryConfig> server;
-    dynamic_reconfigure::Server<controllers::setTrajectoryConfig>::CallbackType f;
-    f = boost::bind(&dynamicReconfigureCallback, _1, _2);
-    server.setCallback(f);
 
     geometry_msgs:PoseStamped pose_msg; // for rotors_simulator
 
@@ -355,10 +354,25 @@ void Trajectory::run(){
         desired_odom_msg.pose.pose.position.x = trajectory(0);
         desired_odom_msg.pose.pose.position.y = trajectory(1);
         desired_odom_msg.pose.pose.position.z = trajectory(2);
-        desired_odom_msg.twist.twist.linear.x = velocity(0);
-        desired_odom_msg.twist.twist.linear.y = velocity(1);
-        desired_odom_msg.twist.twist.linear.z = velocity(2);
+        // desired_odom_msg.twist.twist.linear.x = velocity(0);
+        // desired_odom_msg.twist.twist.linear.y = velocity(1);
+        // desired_odom_msg.twist.twist.linear.z = velocity(2);
         odom_publisher_.publish(desired_odom_msg);
+
+        geometry_msgs::PoseStamped pos_msg;
+        pos_msg.header.stamp = ros::Time::now();
+        pos_msg.pose.position.x = trajectory(0);
+        pos_msg.pose.position.y = trajectory(1);
+        pos_msg.pose.position.z = trajectory(2);
+
+        Eigen::Quaterniond q;
+        q = Eigen::AngleAxisd(trajectory(3), Eigen::Vector3d::UnitZ());
+
+        pos_msg.pose.orientation.x= q.x();
+        pos_msg.pose.orientation.y= q.y();
+        pos_msg.pose.orientation.z= q.z();
+        pos_msg.pose.orientation.w = q.w();
+        pos_publisher_.publish(pos_msg);
 
         //cout << "[Trajectory]: trajectory = " << trajectory.transpose() << endl;
 
@@ -375,7 +389,12 @@ double Trajectory::distance(Vector4d v1, Vector4d v2){
 int main(int argc, char** argv){
     cout << "[Trajectory] Trajectory generator is running..." << endl;
 
-    Trajectory* controller = new Trajectory(argc, argv);
+    Trajectory* trajectory_generator = new Trajectory(argc, argv);
 
-    controller->run();
+    dynamic_reconfigure::Server<controllers::setTrajectoryConfig> server;
+    dynamic_reconfigure::Server<controllers::setTrajectoryConfig>::CallbackType f;
+    f = boost::bind(&Trajectory::dynamicReconfigureCallback, trajectory_generator, _1, _2);
+    server.setCallback(f);
+
+    trajectory_generator->run();
 }

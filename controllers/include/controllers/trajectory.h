@@ -23,6 +23,9 @@ ros::Publisher velocity_publisher;
 ros::Publisher odom_publisher_;
 ros::Publisher flat_publisher_;
 
+ros::Publisher pos_publisher_;
+ros::Publisher cmdvel_publisher_;
+
 // Pose
 Vector4d pose_d;
 
@@ -43,6 +46,7 @@ class Trajectory{
         public:
           Trajectory(int, char**);
           ~Trajectory();
+          void dynamicReconfigureCallback(controllers::setTrajectoryConfig &config, uint32_t level);
           void run();
         private:
           double distance(Vector4d v1, Vector4d v2);

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <node name="trajectory" pkg="controllers" type="trajectory" output="screen">
+      <remap from="/uav/position" to="/mavros/setpoint_position/local"/>
+      <remap from="reference/flatsetpoint" to="/nothing"/>
+      <!-- <remap from="/uav/trajectory_velocity" to="/mavros/setpoint_velocity/cmd_vel"/> -->
+  </node>
+
+</launch>
