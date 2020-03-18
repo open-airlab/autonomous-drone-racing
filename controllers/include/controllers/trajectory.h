@@ -17,37 +17,40 @@ using namespace Eigen;
 
 using Eigen::Vector4d;
 
-// Publishers
-ros::Publisher trajectory_publisher;
-ros::Publisher velocity_publisher;
-ros::Publisher odom_publisher_;
-ros::Publisher flat_publisher_;
-
-ros::Publisher pos_publisher_;
-ros::Publisher cmdvel_publisher_;
-
-// Pose
-Vector4d pose_d;
-
-// Trajectory type
-int trajectory_type;
-
-// Trajectory speed
-double speed;
-
-// Waypoints
-MatrixXd waypoints;
-int waypoint;
-
-// Time
-double t;
-
 class Trajectory{
-        public:
-          Trajectory(int, char**);
-          ~Trajectory();
-          void dynamicReconfigureCallback(controllers::setTrajectoryConfig &config, uint32_t level);
-          void run();
-        private:
-          double distance(Vector4d v1, Vector4d v2);
+  public:
+    Trajectory(int, char**);
+    ~Trajectory();
+    void dynamicReconfigureCallback(controllers::setTrajectoryConfig &config, uint32_t level);
+    void cmdloopCallback(const ros::TimerEvent& event);
+  private:
+    
+    // loop timer sibscriber
+
+    ros::Timer cmdloop_timer_;
+    // Publishers
+    
+    ros::Publisher trajectory_publisher;
+    ros::Publisher velocity_publisher;
+    ros::Publisher odom_publisher_;
+    ros::Publisher flat_publisher_;
+
+    ros::Publisher pos_publisher_;
+    ros::Publisher cmdvel_publisher_;
+
+    ros::Time time_now_, time_previous_;
+    
+    double distance(Vector4d v1, Vector4d v2);
+    // Pose
+    Vector4d pose_d;
+    // Trajectory speed
+    double speed;
+    // Trajectory type
+    int trajectory_type;
+    // Waypoints
+    MatrixXd waypoints;
+    int waypoint;
+
+    // Time
+    double t;
 };
